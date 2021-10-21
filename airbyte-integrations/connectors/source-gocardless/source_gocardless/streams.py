@@ -68,23 +68,52 @@ class IncrementalGocardlessStream(GocardlessStream, ABC):
 
     state_checkpoint_interval = math.inf
 
+    def __init__(self, lookback_window_days: int = 0, **kwargs):
+        super().__init__(**kwargs)
+        self.lookback_window_days = lookback_window_days
+
     @property
     def cursor_field(self) -> str:
         """
-        TODO
         Override to return the cursor field used by this stream e.g: an API entity might always use created_at as the cursor field. This is
         usually id or date based. This field's presence tells the framework this in an incremental stream. Required for incremental.
 
         :return str: The name of the cursor field.
         """
-        return []
+
+        return self.cursor_field
 
     def get_updated_state(self, current_stream_state: MutableMapping[str, Any], latest_record: Mapping[str, Any]) -> Mapping[str, Any]:
         """
         Override to determine the latest state after reading the latest record. This typically compared the cursor_field from the latest record and
         the current state and picks the 'most' recent cursor. This is how a stream's state is determined. Required for incremental.
         """
-        return {}
+        return {
+            self.cursor_field: max(
+                latest_record.get(self.cursor_field),
+                current_stream_state.get(self.cursor_field, 0)
+            )
+        }
+
+    def request_params(self, stream_state: Mapping[str, Any] = None, **kwargs):
+        stream_state = stream_state or {}
+        params = super().request_params(stream_state=stream_state, **kwargs)
+
+        start_timestamp = self.get_start_timestamp(stream_state)
+        if start_timestamp:
+            params["created[gte]"] = start_timestamp
+        return params
+
+    def get_start_timestamp(self, stream_state) -> int:
+        start_point = self.start_date
+        if stream_state and self.cursor_field in stream_state:
+            start_point = max(start_point, stream_state[self.cursor_field])
+
+        if start_point and self.lookback_window_days:
+            self.logger.info(f"Applying lookback window of {self.lookback_window_days} days to stream {self.name}")
+            start_point = int(pendulum.from_timestamp(start_point).subtract(days=abs(self.lookback_window_days)).timestamp())
+
+        return start_point
 
 
 class Payments(IncrementalGocardlessStream):

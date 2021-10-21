@@ -11,7 +11,7 @@ from airbyte_cdk.sources import AbstractSource
 from airbyte_cdk.sources.streams import Stream
 from airbyte_cdk.sources.streams.http import HttpStream
 from airbyte_cdk.sources.streams.http.auth import TokenAuthenticator
-from source_gocardless.streams import Payment
+from source_gocardless.streams import Payments
 import pendulum
 
 
@@ -45,4 +45,6 @@ class SourceGocardless(AbstractSource):
             "start_date": start_date
         }
         incremental_args = {**args, "lookback_window_days": config.get("lookback_window_days")}
-        return [Customers(authenticator=auth), Employees(authenticator=auth)]
+        return [
+            Payments(**incremental_args)
+        ]
