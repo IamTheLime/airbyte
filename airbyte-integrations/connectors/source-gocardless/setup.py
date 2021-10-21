@@ -8,6 +8,7 @@ from setuptools import find_packages, setup
 MAIN_REQUIREMENTS = [
     "airbyte-cdk",
     "gocardless_pro==1.26.0",
+    "pendulum==1.2.0"
 ]
 
 TEST_REQUIREMENTS = [
