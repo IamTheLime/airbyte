@@ -29,4 +29,4 @@ def test_lookback_window(lookback_window_days, current_state, expected, message)
         lookback_window_days=lookback_window_days
     )
     payment_stream.cursor_field = "created_at"
-    assert inv_stream.get_start_timestamp({"created": current_state}) == expected, message
+    assert payment_stream.get_start_timestamp({"created": current_state}) == expected, message
