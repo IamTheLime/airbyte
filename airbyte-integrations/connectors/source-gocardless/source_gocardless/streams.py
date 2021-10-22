@@ -23,23 +23,36 @@ class GocardlessStream(HttpStream, ABC):
         start_date: int,
         access_token: str,
         environment: str,
+        gocardless_version: str,
+        req_data_access_keyword: str,
         **kwargs
     ):
         super().__init__(**kwargs)
         self.access_token = access_token
         self.start_date = start_date
         self.environment = environment
+        self.gocardless_version = gocardless_version
+        self.req_data_access_keyword = req_data_access_keyword
+
         if self.environment == "sandbox":
             self.url_base = "https://api-sandbox.gocardless.com"
 
     def next_page_token(self, response: requests.Response) -> Optional[Mapping[str, Any]]:
         decoded_response = response.json()
-        if (
-            len(decoded_response.get("resources", [])) > 0
-        ):
+        if (decoded_response["meta"]["cursors"]["after"] != None):
             return {"starting_after": decoded_response["meta"]["cursors"]["after"]}
 
         return None
+
+    def request_headers(
+        self,
+        stream_state: Mapping[str, Any],
+        stream_slice: Mapping[str, Any] = None,
+        next_page_token: Mapping[str, Any] = None
+    ) -> Mapping[str, Any]:
+        return {
+            "GoCardless-Version": self.gocardless_version,
+        }
 
     def request_params(
         self,
@@ -60,7 +73,10 @@ class GocardlessStream(HttpStream, ABC):
 
     def parse_response(self, response: requests.Response, **kwargs) -> Iterable[Mapping]:
         response_json = response.json()
-        yield from response_json.get("resources", [])
+        # We need to pass on the gocardless_req_access_keyword argument as each of the
+        # list methods will return the results in the body of the request under a
+        # camel case keyword of the stream class, i.e. CustomerBankAccounts -> customer_bank_accounts
+        yield from response_json.get(self.req_data_access_keyword, [])
 
 
 # Basic incremental stream
@@ -123,14 +139,19 @@ class Payments(IncrementalGocardlessStream):
 
     cursor = "created_at"
 
+    def __init__(
+        self,
+        **kwargs
+    ):
+        super().__init__(**kwargs, req_data_access_keyword="payments")
+
     def path(
         self, stream_state: Mapping[str, Any] = None, stream_slice: Mapping[str, Any] = None, next_page_token: Mapping[str, Any] = None
     ) -> str:
         """
-        TODO: Override this method to define the path this stream corresponds to. E.g. if the url is https://example-api.com/v1/customers then this
-        should return "customers". Required.
+        should return "payments". Required.
         """
-        return "customers"
+        return "payments"
 
 
 # class ChargeBacks(IncrementalGocardlessStream):
