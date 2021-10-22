@@ -41,7 +41,8 @@ class SourceGocardless(AbstractSource):
             "authenticator": auth,
             "access_token": config["access_token"],
             "environment":config["gocardless_environment"],
-            "start_date": start_date
+            "start_date": start_date,
+            "gocardless_version": config["gocardless_version"],
         }
         incremental_args = {**args, "lookback_window_days": config.get("lookback_window_days")}
         return [
