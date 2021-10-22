@@ -24,7 +24,7 @@ class GocardlessStream(HttpStream, ABC):
         access_token: str,
         environment: str,
         gocardless_version: str,
-        req_data_access_keyword: str,
+        req_data_access_keyword: str, # DEFINE THIS IN THE SUBCLASS, i.e. Payment
         **kwargs
     ):
         super().__init__(**kwargs)
