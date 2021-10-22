@@ -1,29 +1,5 @@
 {
   "type": ["null", "object"],
-  "properties":{
-    "meta": {
-      "type": ["null", "object"],
-      "properties": {
-        "cursors": {
-            "type": ["null", "object"],
-            "properties":{
-              "before": {
-                "type": ["null", "string"]
-              },
-              "after": {
-                "type": ["null", "string"]
-              }
-            }
-          },
-          "limit": {
-            "type": ["null", "integer"]
-          }
-      }
-    },
-    "payments": {
-      "type": ["null", "array"],
-      "items": {
-        "type": ["null", "object"],
         "properties": {
           "id": {
             "type": ["null", "string"]
@@ -93,7 +69,4 @@
             "type": ["null", "boolean"]
           }
         }
-      }
-    }
-  }
 }
