@@ -26,7 +26,8 @@ def test_lookback_window(lookback_window_days, current_state, expected, message)
         access_token=213,
         environment="sandbox",
         start_date=1577836800,
-        lookback_window_days=lookback_window_days
+        lookback_window_days=lookback_window_days,
+        gocardless_version="2015-07-06"
     )
     payment_stream.cursor_field = "created_at"
     assert payment_stream.get_start_timestamp({"created": current_state}) == expected, message
