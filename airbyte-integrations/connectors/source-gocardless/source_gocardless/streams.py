@@ -117,7 +117,7 @@ class IncrementalGocardlessStream(GocardlessStream, ABC):
 
         if start_point and self.lookback_window_days:
             self.logger.info(f"Applying lookback window of {self.lookback_window_days} days to stream {self.name}")
-            start_point = int(pendulum.from_timestamp(start_point).subtract(days=abs(self.lookback_window_days)).timestamp())
+            start_point = pendulum.parse(start_point).subtract(days=abs(self.lookback_window_days)).to_iso8601_string()
         return start_point
 
 

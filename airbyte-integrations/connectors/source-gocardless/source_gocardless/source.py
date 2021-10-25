@@ -12,7 +12,6 @@ from airbyte_cdk.sources.streams import Stream
 from airbyte_cdk.sources.streams.http import HttpStream
 from airbyte_cdk.sources.streams.http.auth import TokenAuthenticator
 from source_gocardless.streams import Payments
-import pendulum
 
 
 # Source
@@ -36,7 +35,7 @@ class SourceGocardless(AbstractSource):
         :param config: A Mapping of the user input configuration as defined in the connector spec.
         """
         auth = TokenAuthenticator(token=config["access_token"])
-        start_date = pendulum.parse(config["start_date"]).int_timestamp
+        start_date = config["start_date"]
         args = {
             "authenticator": auth,
             "access_token": config["access_token"],

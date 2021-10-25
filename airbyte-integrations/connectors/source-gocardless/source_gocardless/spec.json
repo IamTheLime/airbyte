@@ -21,7 +21,7 @@
       "gocardless_version": {
         "type": "string",
         "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
-        "description": "Gocardless version, it is a date, you can find the latest here https://support.gocardless.com/hc/en-gb/articles/115000451505-Guide-to-upgrading "
+        "description": "Gocardless version, it is a date, you can find the latest here https://developer.gocardless.com/api-reference/#api-usage-making-requests"
       },
       "start_date": {
         "type": "string",

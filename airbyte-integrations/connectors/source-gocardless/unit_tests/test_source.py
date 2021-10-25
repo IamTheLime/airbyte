@@ -14,18 +14,18 @@ SECONDS_IN_DAY = 24 * 60 * 60
 @pytest.mark.parametrize(
     "lookback_window_days, current_state, expected, message",
     [
-        (None, now_dt.timestamp(), now_dt.timestamp(), "if lookback_window_days is not set should not affect cursor value"),
-        (0, now_dt.timestamp(), now_dt.timestamp(), "if lookback_window_days is not set should not affect cursor value"),
-        (10, now_dt.timestamp(), int(now_dt.timestamp() - SECONDS_IN_DAY * 10), "Should calculate cursor value as expected"),
+        (None, now_dt.to_iso8601_string(), now_dt.to_iso8601_string(), "if lookback_window_days is not set should not affect cursor value"),
+        (0, now_dt.to_iso8601_string(), now_dt.to_iso8601_string(), "if lookback_window_days is not set should not affect cursor value"),
+        (10, now_dt.to_iso8601_string(), now_dt.subtract(seconds=SECONDS_IN_DAY * 10).to_iso8601_string(), "Should calculate cursor value as expected"),
         # ignore sign
-        (-10, now_dt.timestamp(), int(now_dt.timestamp() - SECONDS_IN_DAY * 10), "Should not care for the sign, use the module"),
+        (-10, now_dt.to_iso8601_string(), now_dt.subtract(seconds=SECONDS_IN_DAY * 10).to_iso8601_string(), "Should not care for the sign, use the module"),
     ],
 )
 def test_lookback_window(lookback_window_days, current_state, expected, message):
     payment_stream = Payments(
         access_token=213,
         environment="sandbox",
-        start_date=1577836800,
+        start_date="2017-01-25T00:00:00Z",
         lookback_window_days=lookback_window_days,
         gocardless_version="2015-07-06"
     )
