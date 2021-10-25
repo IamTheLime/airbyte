@@ -107,7 +107,7 @@ class IncrementalGocardlessStream(GocardlessStream, ABC):
 
         start_timestamp = self.get_start_timestamp(stream_state)
         if start_timestamp:
-            params["created[gte]"] = start_timestamp
+            params["created_at[gte]"] = start_timestamp
         return params
 
     def get_start_timestamp(self, stream_state) -> int:
