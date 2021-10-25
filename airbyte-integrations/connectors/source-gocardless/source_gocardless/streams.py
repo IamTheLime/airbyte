@@ -36,7 +36,7 @@ class GocardlessStream(HttpStream, ABC):
         self.req_data_access_keyword = req_data_access_keyword
 
         if self.environment == "sandbox":
-            self.url_base = "https://api-sandbox.gocardless.com"
+            self.url_base = "https://api-sandbox.gocardless.com/"
 
     def next_page_token(self, response: requests.Response) -> Optional[Mapping[str, Any]]:
         decoded_response = response.json()
