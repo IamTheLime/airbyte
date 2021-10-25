@@ -3,6 +3,7 @@
 #
 
 
+import logging
 import math
 from abc import ABC, abstractmethod
 from typing import Any, Iterable, Mapping, MutableMapping, Optional
@@ -117,7 +118,6 @@ class IncrementalGocardlessStream(GocardlessStream, ABC):
         if start_point and self.lookback_window_days:
             self.logger.info(f"Applying lookback window of {self.lookback_window_days} days to stream {self.name}")
             start_point = int(pendulum.from_timestamp(start_point).subtract(days=abs(self.lookback_window_days)).timestamp())
-
         return start_point
 
 
