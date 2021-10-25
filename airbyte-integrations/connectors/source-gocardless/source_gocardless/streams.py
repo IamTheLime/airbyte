@@ -41,7 +41,7 @@ class GocardlessStream(HttpStream, ABC):
     def next_page_token(self, response: requests.Response) -> Optional[Mapping[str, Any]]:
         decoded_response = response.json()
         if (decoded_response["meta"]["cursors"]["after"] != None):
-            return {"starting_after": decoded_response["meta"]["cursors"]["after"]}
+            return {"after": decoded_response["meta"]["cursors"]["after"]}
 
         return None
 
