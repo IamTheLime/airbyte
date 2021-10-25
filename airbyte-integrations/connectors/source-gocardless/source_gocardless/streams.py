@@ -40,6 +40,7 @@ class GocardlessStream(HttpStream, ABC):
 
     def next_page_token(self, response: requests.Response) -> Optional[Mapping[str, Any]]:
         decoded_response = response.json()
+        # These cursors are referent to cursor pagination
         if (decoded_response["meta"]["cursors"]["after"] != None):
             return {"after": decoded_response["meta"]["cursors"]["after"]}
 
@@ -94,11 +95,14 @@ class IncrementalGocardlessStream(GocardlessStream, ABC):
         Override to determine the latest state after reading the latest record. This typically compared the cursor_field from the latest record and
         the current state and picks the 'most' recent cursor. This is how a stream's state is determined. Required for incremental.
         """
+
+        latest_record_ts = pendulum.parse(latest_record.get(self.cursor_field))
+        current_state_ts = pendulum.parse(current_stream_state.get(self.cursor_field, "1970-01-01T00:00:00.000Z"))
+
+        updated_state = max(latest_record_ts, current_state_ts).to_iso8601_string()
+
         return {
-            self.cursor_field: max(
-                latest_record.get(self.cursor_field),
-                current_stream_state.get(self.cursor_field, 0)
-            )
+            self.cursor_field: updated_state
         }
 
     def request_params(self, stream_state: Mapping[str, Any] = None, **kwargs):
@@ -118,6 +122,7 @@ class IncrementalGocardlessStream(GocardlessStream, ABC):
         if start_point and self.lookback_window_days:
             self.logger.info(f"Applying lookback window of {self.lookback_window_days} days to stream {self.name}")
             start_point = pendulum.parse(start_point).subtract(days=abs(self.lookback_window_days)).to_iso8601_string()
+
         return start_point
 
 
