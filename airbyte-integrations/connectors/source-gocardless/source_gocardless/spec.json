@@ -9,7 +9,7 @@
     "properties": {
       "access_token": {
         "type": "string",
-        "pattern": "^(sandbox|live)_[a-zA-Z0-9]+$",
+        "pattern": "^(sandbox|live)_.+$",
         "description": "Gocardless API TOKEN",
         "airbyte_secret": true
       },
