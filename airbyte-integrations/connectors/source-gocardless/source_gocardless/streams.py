@@ -6,7 +6,7 @@
 import logging
 import math
 from abc import ABC, abstractmethod
-from typing import Any, Iterable, Mapping, MutableMapping, Optional
+from typing import Any, Callable, Iterable, Mapping, MutableMapping, Optional
 
 import pendulum
 import requests
@@ -80,9 +80,90 @@ class GocardlessStream(HttpStream, ABC):
         # camel case keyword of the stream class, i.e. CustomerBankAccounts -> customer_bank_accounts
         yield from response_json.get(self.req_data_access_keyword, [])
 
+class GocardlessEventStream(HttpStream, ABC):
+
+    # TODO: Fill in the url base. Required.
+    url_base = "https://api.gocardless.com/"
+    primary_key = "id"
+
+    def __init__(
+        self,
+        start_date: int,
+        access_token: str,
+        environment: str,
+        gocardless_version: str,
+        req_primary_data_accessor: Callable,
+        req_primary_sort_func: Callable,
+        req_secondary_data_accessor: Callable,
+        req_secondary_sort_func : Callable,
+        **kwargs
+    ):
+        super().__init__(**kwargs)
+        self.access_token = access_token
+        self.start_date = start_date
+        self.environment = environment
+        self.gocardless_version = gocardless_version
+
+        self.req_primary_data_accessor = req_primary_data_accessor
+        self.req_primary_sort_func = req_primary_sort_func
+        self.req_secondary_data_accessor = req_secondary_data_accessor
+        self.req_secondary_sort_func = req_secondary_sort_func
+
+        if self.environment == "sandbox":
+            self.url_base = "https://api-sandbox.gocardless.com/"
+
+    def next_page_token(self, response: requests.Response) -> Optional[Mapping[str, Any]]:
+        decoded_response = response.json()
+        # These cursors are referent to cursor pagination
+        if (decoded_response["meta"]["cursors"]["after"] != None):
+            return {"after": decoded_response["meta"]["cursors"]["after"]}
+
+        return None
+
+    def request_headers(
+        self,
+        stream_state: Mapping[str, Any],
+        stream_slice: Mapping[str, Any] = None,
+        next_page_token: Mapping[str, Any] = None
+    ) -> Mapping[str, Any]:
+        return {
+            "GoCardless-Version": self.gocardless_version,
+        }
+
+    def request_params(
+        self,
+        stream_state: Mapping[str, Any],
+        stream_slice: Mapping[str, any] = None,
+        next_page_token: Mapping[str, Any] = None
+    ) -> MutableMapping[str, Any]:
+
+        # Gocardless API sets a limit of 500 to any list of results
+        stream_handler = {
+            "limit": 500,
+        }
+
+        if next_page_token:
+            stream_handler.update(next_page_token)
+
+        return stream_handler
+
+    def parse_response(self, response: requests.Response, **kwargs) -> Iterable[Mapping]:
+        response_json = response.json()
+        # We need to pass on the gocardless_req_access_keyword argument as each of the
+        # list methods will return the results in the body of the request under a
+        # camel case keyword of the stream class, i.e. CustomerBankAccounts -> customer_bank_accounts
+
+        response_json["events"] = sorted(self.req_primary_data_accessor(response_json), key=self.req_primary_sort_func)
+        linked_values = response_json["linked"]
+        response_json["payments"] = sorted(linked_values["payments"], self.req_secondary_sort_func)
+
+        event_list = [{**event[0], "payment": event[1]} for event in list(zip(self.req, events["payments"]))]
+
+        yield from response_json.get(self.req_data_access_keyword, [])
+
 
 # Basic incremental stream
-class IncrementalGocardlessStream(GocardlessStream, ABC):
+class IncrementalGocardlessEventStream(GocardlessEventStream, ABC):
 
     state_checkpoint_interval = math.inf
 
@@ -126,12 +207,10 @@ class IncrementalGocardlessStream(GocardlessStream, ABC):
         return start_point
 
 
-class Payments(IncrementalGocardlessStream):
+class Payments(GocardlessStream):
     """
     TODO: Change class name to match the table/data source this stream corresponds to.
     """
-
-    cursor_field = "created_at"
 
     def __init__(
         self,
@@ -148,5 +227,29 @@ class Payments(IncrementalGocardlessStream):
         return "payments"
 
 
-# class ChargeBacks(IncrementalGocardlessStream):
+class PaymentEvents(IncrementalGocardlessEventStream):
+    """
+    TODO: Change class name to match the table/data source this stream corresponds to.
+    """
 
+    cursor_field = "created_at"
+
+    def __init__(
+        self,
+        **kwargs
+    ):
+        super().__init__(
+            **kwargs,
+            req_primary_data_accessor=lambda event: event["events"],
+            req_primary_sort_func=lambda resource: resource["links"]["payment"],
+            req_secondary_data_accessor=lambda event: event["payments"],
+            req_secondary_sort_func=lambda resource: resource["id"],
+        )
+
+    def path(
+        self, stream_state: Mapping[str, Any] = None, stream_slice: Mapping[str, Any] = None, next_page_token: Mapping[str, Any] = None
+    ) -> str:
+        """
+        Check events API for information on event listing
+        """
+        return "events?resource_type=payments&include=payment"
