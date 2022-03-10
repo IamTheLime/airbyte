@@ -20,10 +20,10 @@ import SpecialBlock from "./components/SpecialBlock";
 
 type FormValues = {
   name: string;
-  company: string;
+  companyName: string;
   email: string;
   password: string;
-  subscribe: boolean;
+  news: boolean;
   security: boolean;
 };
 
@@ -33,9 +33,12 @@ const MarginBlock = styled.div`
 
 const SignupPageValidationSchema = yup.object().shape({
   email: yup.string().email("form.email.error").required("form.empty.error"),
-  password: yup.string().required("form.empty.error"),
+  password: yup
+    .string()
+    .min(6, "signup.password.minLength")
+    .required("form.empty.error"),
   name: yup.string().required("form.empty.error"),
-  company: yup.string().required("form.empty.error"),
+  companyName: yup.string().required("form.empty.error"),
   security: yup.boolean().oneOf([true], "form.empty.error"),
 });
 
@@ -55,10 +58,10 @@ const SignupPage: React.FC = () => {
       <Formik<FormValues>
         initialValues={{
           name: "",
-          company: "",
+          companyName: "",
           email: "",
           password: "",
-          subscribe: true,
+          news: true,
           security: false,
         }}
         validationSchema={SignupPageValidationSchema}
@@ -95,7 +98,7 @@ const SignupPage: React.FC = () => {
                   />
                 )}
               </Field>
-              <Field name="company">
+              <Field name="companyName">
                 {({ field, meta }: FieldProps<string>) => (
                   <LabeledInput
                     {...field}
@@ -155,7 +158,7 @@ const SignupPage: React.FC = () => {
               </Field>
             </FieldItem>
             <FieldItem>
-              <Field name="subscribe">
+              <Field name="news">
                 {({ field, meta }: FieldProps<string>) => (
                   <MarginBlock>
                     <CheckBoxControl
@@ -183,7 +186,7 @@ const SignupPage: React.FC = () => {
                       <FormattedMessage
                         id="login.security"
                         values={{
-                          terms: (...terms: React.ReactNode[]) => (
+                          terms: (terms: React.ReactNode) => (
                             <Link
                               $clear
                               target="_blank"
@@ -193,7 +196,7 @@ const SignupPage: React.FC = () => {
                               {terms}
                             </Link>
                           ),
-                          privacy: (...privacy: React.ReactNode[]) => (
+                          privacy: (privacy: React.ReactNode) => (
                             <Link
                               $clear
                               target="_blank"
