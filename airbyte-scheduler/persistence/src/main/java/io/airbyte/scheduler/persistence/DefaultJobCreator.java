@@ -4,27 +4,38 @@
 
 package io.airbyte.scheduler.persistence;
 
+import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
+import io.airbyte.config.JobTypeResourceLimit.JobType;
+import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
+import io.airbyte.config.persistence.ConfigRepository;
 import io.airbyte.protocol.models.ConfiguredAirbyteCatalog;
 import io.airbyte.protocol.models.DestinationSyncMode;
 import io.airbyte.protocol.models.SyncMode;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.Nullable;
 
 public class DefaultJobCreator implements JobCreator {
 
   private final JobPersistence jobPersistence;
+  private final ConfigRepository configRepository;
+  private final ResourceRequirements workerResourceRequirements;
 
-  public DefaultJobCreator(final JobPersistence jobPersistence) {
+  public DefaultJobCreator(final JobPersistence jobPersistence,
+                           final ConfigRepository configRepository,
+                           final ResourceRequirements workerResourceRequirements) {
     this.jobPersistence = jobPersistence;
+    this.configRepository = configRepository;
+    this.workerResourceRequirements = workerResourceRequirements;
   }
 
   @Override
@@ -33,7 +44,9 @@ public class DefaultJobCreator implements JobCreator {
                                       final StandardSync standardSync,
                                       final String sourceDockerImageName,
                                       final String destinationDockerImageName,
-                                      final List<StandardSyncOperation> standardSyncOperations)
+                                      final List<StandardSyncOperation> standardSyncOperations,
+                                      @Nullable final ActorDefinitionResourceRequirements sourceResourceReqs,
+                                      @Nullable final ActorDefinitionResourceRequirements destinationResourceReqs)
       throws IOException {
     // reusing this isn't going to quite work.
     final JobSyncConfig jobSyncConfig = new JobSyncConfig()
@@ -47,9 +60,21 @@ public class DefaultJobCreator implements JobCreator {
         .withOperationSequence(standardSyncOperations)
         .withConfiguredAirbyteCatalog(standardSync.getCatalog())
         .withState(null)
-        .withResourceRequirements(standardSync.getResourceRequirements());
+        .withResourceRequirements(ResourceRequirementsUtils.getResourceRequirements(
+            standardSync.getResourceRequirements(),
+            workerResourceRequirements))
+        .withSourceResourceRequirements(ResourceRequirementsUtils.getResourceRequirements(
+            standardSync.getResourceRequirements(),
+            sourceResourceReqs,
+            workerResourceRequirements,
+            JobType.SYNC))
+        .withDestinationResourceRequirements(ResourceRequirementsUtils.getResourceRequirements(
+            standardSync.getResourceRequirements(),
+            destinationResourceReqs,
+            workerResourceRequirements,
+            JobType.SYNC));
 
-    jobPersistence.getCurrentState(standardSync.getConnectionId()).ifPresent(jobSyncConfig::withState);
+    configRepository.getConnectionState(standardSync.getConnectionId()).ifPresent(jobSyncConfig::withState);
 
     final JobConfig jobConfig = new JobConfig()
         .withConfigType(ConfigType.SYNC)
@@ -83,7 +108,9 @@ public class DefaultJobCreator implements JobCreator {
         .withDestinationConfiguration(destination.getConfiguration())
         .withOperationSequence(standardSyncOperations)
         .withConfiguredAirbyteCatalog(configuredAirbyteCatalog)
-        .withResourceRequirements(standardSync.getResourceRequirements());
+        .withResourceRequirements(ResourceRequirementsUtils.getResourceRequirements(
+            standardSync.getResourceRequirements(),
+            workerResourceRequirements));
 
     final JobConfig jobConfig = new JobConfig()
         .withConfigType(ConfigType.RESET_CONNECTION)
